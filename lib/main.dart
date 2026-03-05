@@ -2,7 +2,7 @@ import 'dart:io';
 import 'dart:math';
 
 import 'package:flutter/material.dart';
-import 'package:flutter_application_1/auto_debounce.dart';
+import 'package:NoteIt/auto_debounce.dart';
 import 'package:window_manager/window_manager.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart' as p;
