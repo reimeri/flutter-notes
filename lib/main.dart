@@ -75,6 +75,9 @@ class MyHomePage extends StatefulWidget {
 
 class _MyHomePageState extends State<MyHomePage> {
   Note? _selectedNote;
+  String _searchText = "";
+  bool _isSearchEnabled = false;
+  List<Note> _visibleNotes = [];
   final List<Note> _notes = [];
   final TextEditingController _noteContentController = TextEditingController();
 
@@ -84,9 +87,20 @@ class _MyHomePageState extends State<MyHomePage> {
     loadedNotes.then((value) {
       setState(() {
         _notes.addAll(value);
+        _visibleNotes = _notes;
       });
     });
     super.initState();
+  }
+
+  void _updateNoteFiltering(String searchText) {
+    setState(() {
+      _searchText = searchText;
+      _visibleNotes = _notes.where((note) {
+        final noteTitle = extractTitle(note.content).toLowerCase();
+        return noteTitle.contains(searchText.toLowerCase());
+      }).toList();
+    });
   }
 
   void _createNewNote() {
@@ -96,8 +110,20 @@ class _MyHomePageState extends State<MyHomePage> {
         date: DateTime.now(),
       );
       _notes.add(newNote);
+      _visibleNotes = _notes;
       _selectedNote = newNote;
       _noteContentController.text = newNote.content;
+    });
+  }
+
+  void _toggleSearch() {
+    print("Toggling search");
+    setState(() {
+      _isSearchEnabled = !_isSearchEnabled;
+
+      if (!_isSearchEnabled) {
+        _visibleNotes = _notes;
+      }
     });
   }
 
@@ -132,6 +158,7 @@ class _MyHomePageState extends State<MyHomePage> {
       }
 
       _notes.remove(note);
+      _visibleNotes = _notes;
     });
   }
 
@@ -140,13 +167,18 @@ class _MyHomePageState extends State<MyHomePage> {
     return Scaffold(
       body: Column(
         children: [
-          FakeNativeWindowBar(selectedNote: _selectedNote),
+          FakeNativeWindowBar(
+            selectedNote: _selectedNote,
+            isSearchEnabled: _isSearchEnabled,
+            onSearchTextUpdated: _updateNoteFiltering,
+            onToggleSearch: _toggleSearch,
+          ),
           Expanded(
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 SideBar(
-                  notes: _notes,
+                  notes: _visibleNotes,
                   onNoteSelected: _selectNote,
                   onNoteDeleted: _deleteNote,
                   currentlySelectedNote: _selectedNote,

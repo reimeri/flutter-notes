@@ -3,32 +3,19 @@ import 'package:NoteIt/utils/misc.dart';
 import 'package:flutter/material.dart';
 import 'package:window_manager/window_manager.dart';
 
-class FakeNativeWindowBar extends StatefulWidget {
-  const FakeNativeWindowBar({super.key, required this.selectedNote});
-
-  // This widget is the home page of your application. It is stateful, meaning
-  // that it has a State object (defined below) that contains fields that affect
-  // how it looks.
-
-  // This class is the configuration for the state. It holds the values (in this
-  // case the title) provided by the parent (in this case the App widget) and
-  // used by the build method of the State. Fields in a Widget subclass are
-  // always marked "final".
+class FakeNativeWindowBar extends StatelessWidget {
+  const FakeNativeWindowBar({
+    super.key,
+    required this.selectedNote,
+    required this.isSearchEnabled,
+    required this.onToggleSearch,
+    required this.onSearchTextUpdated,
+  });
 
   final Note? selectedNote;
-
-  @override
-  State<FakeNativeWindowBar> createState() => _FakeNativeWindowBarState();
-}
-
-class _FakeNativeWindowBarState extends State<FakeNativeWindowBar> {
-  bool _isSearchOpen = false;
-
-  void _toggleSearch() {
-    setState(() {
-      _isSearchOpen = !_isSearchOpen;
-    });
-  }
+  final bool isSearchEnabled;
+  final void Function() onToggleSearch;
+  final void Function(String) onSearchTextUpdated;
 
   @override
   Widget build(BuildContext context) {
@@ -52,7 +39,7 @@ class _FakeNativeWindowBarState extends State<FakeNativeWindowBar> {
                   ),
                 ),
                 child: Visibility(
-                  visible: !_isSearchOpen,
+                  visible: !isSearchEnabled,
                   child: Text(
                     style: TextStyle(fontWeight: FontWeight(750)),
                     "Notes",
@@ -64,7 +51,7 @@ class _FakeNativeWindowBarState extends State<FakeNativeWindowBar> {
                   alignment: AlignmentGeometry.center,
                   child: Text(
                     style: TextStyle(fontWeight: FontWeight(750)),
-                    extractTitle(widget.selectedNote?.content ?? ""),
+                    extractTitle(selectedNote?.content ?? ""),
                   ),
                 ),
               ),
@@ -96,18 +83,18 @@ class _FakeNativeWindowBarState extends State<FakeNativeWindowBar> {
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(9),
                           ),
-                          backgroundColor: _isSearchOpen
+                          backgroundColor: isSearchEnabled
                               ? Theme.of(context).colorScheme.inversePrimary
                               : null,
                         ),
                         icon: Icon(Icons.search),
-                        onPressed: _toggleSearch,
+                        onPressed: onToggleSearch,
                       ),
                     ),
                     Expanded(
                       child: Padding(
                         padding: EdgeInsetsGeometry.symmetric(horizontal: 5),
-                        child: _isSearchOpen
+                        child: isSearchEnabled
                             ? TextField(
                                 style: TextStyle(fontSize: 20),
                                 decoration: InputDecoration(
@@ -115,6 +102,9 @@ class _FakeNativeWindowBarState extends State<FakeNativeWindowBar> {
                                   fillColor: Colors.amber,
                                   hoverColor: Colors.amber,
                                 ),
+                                onChanged: (value) => {
+                                  onSearchTextUpdated(value),
+                                },
                               )
                             : Container(),
                       ),
