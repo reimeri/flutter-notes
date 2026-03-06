@@ -3,10 +3,32 @@ import 'package:NoteIt/utils/misc.dart';
 import 'package:flutter/material.dart';
 import 'package:window_manager/window_manager.dart';
 
-class FakeNativeWindowBar extends StatelessWidget {
+class FakeNativeWindowBar extends StatefulWidget {
   const FakeNativeWindowBar({super.key, required this.selectedNote});
 
+  // This widget is the home page of your application. It is stateful, meaning
+  // that it has a State object (defined below) that contains fields that affect
+  // how it looks.
+
+  // This class is the configuration for the state. It holds the values (in this
+  // case the title) provided by the parent (in this case the App widget) and
+  // used by the build method of the State. Fields in a Widget subclass are
+  // always marked "final".
+
   final Note? selectedNote;
+
+  @override
+  State<FakeNativeWindowBar> createState() => _FakeNativeWindowBarState();
+}
+
+class _FakeNativeWindowBarState extends State<FakeNativeWindowBar> {
+  bool _isSearchOpen = false;
+
+  void _toggleSearch() {
+    setState(() {
+      _isSearchOpen = !_isSearchOpen;
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -29,9 +51,12 @@ class FakeNativeWindowBar extends StatelessWidget {
                     ),
                   ),
                 ),
-                child: Text(
-                  style: TextStyle(fontWeight: FontWeight(750)),
-                  "Notes",
+                child: Visibility(
+                  visible: !_isSearchOpen,
+                  child: Text(
+                    style: TextStyle(fontWeight: FontWeight(750)),
+                    "Notes",
+                  ),
                 ),
               ),
               Expanded(
@@ -39,7 +64,7 @@ class FakeNativeWindowBar extends StatelessWidget {
                   alignment: AlignmentGeometry.center,
                   child: Text(
                     style: TextStyle(fontWeight: FontWeight(750)),
-                    extractTitle(selectedNote?.content ?? ""),
+                    extractTitle(widget.selectedNote?.content ?? ""),
                   ),
                 ),
               ),
@@ -71,15 +96,29 @@ class FakeNativeWindowBar extends StatelessWidget {
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(9),
                           ),
+                          backgroundColor: _isSearchOpen
+                              ? Theme.of(context).colorScheme.inversePrimary
+                              : null,
                         ),
                         icon: Icon(Icons.search),
-                        onPressed: () async {
-                          print("Search");
-                        },
+                        onPressed: _toggleSearch,
                       ),
                     ),
-                    Expanded(child: Container()),
-                    Expanded(child: Container()),
+                    Expanded(
+                      child: Padding(
+                        padding: EdgeInsetsGeometry.symmetric(horizontal: 5),
+                        child: _isSearchOpen
+                            ? TextField(
+                                style: TextStyle(fontSize: 20),
+                                decoration: InputDecoration(
+                                  hintText: "Search...",
+                                  fillColor: Colors.amber,
+                                  hoverColor: Colors.amber,
+                                ),
+                              )
+                            : Container(),
+                      ),
+                    ),
                     SizedBox(
                       width: 32,
                       height: 32,
