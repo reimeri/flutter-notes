@@ -34,7 +34,7 @@ class SideBar extends StatelessWidget {
         itemBuilder: (context, index) => Card(
           color: currentlySelectedNote == notes[(notes.length - 1) - index]
               ? Theme.of(context).colorScheme.inversePrimary
-              : Theme.of(context).colorScheme.primaryContainer,
+              : null,
           child: InkWell(
             borderRadius: BorderRadius.all(Radius.circular(12)),
             child: Padding(
