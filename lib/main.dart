@@ -6,9 +6,23 @@ import 'package:NoteIt/utils/auto_debounce.dart';
 import 'package:NoteIt/utils/misc.dart';
 import 'package:NoteIt/utils/file_utils.dart';
 import 'package:NoteIt/note.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:window_manager/window_manager.dart';
 
 final autoSave = AutoDebouncer();
+
+final colorThemes = [
+  Colors.red,
+  Colors.green,
+  Colors.blue,
+  Colors.yellow,
+  Colors.deepOrange,
+  Colors.indigoAccent,
+  Colors.pink,
+  Colors.purple,
+  Colors.teal,
+  Colors.lime,
+];
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
@@ -26,49 +40,94 @@ void main() {
     await windowManager.focus();
   });
 
-  runApp(const MyApp());
+  runApp(MyApp());
 }
 
-class MyApp extends StatelessWidget {
+class MyApp extends StatefulWidget {
   const MyApp({super.key});
+
+  @override
+  State<MyApp> createState() => _MyAppState();
+}
+
+class _MyAppState extends State<MyApp> {
+  Color _selectedColorTheme = colorThemes[0];
+  ThemeMode _themeMode = ThemeMode.system;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadTheme();
+    _loadColorTheme();
+  }
+
+  void _loadTheme() async {
+    final prefs = await SharedPreferences.getInstance();
+    final index = prefs.getInt('themeMode') ?? ThemeMode.system.index;
+    setState(() => _themeMode = ThemeMode.values[index]);
+  }
+
+  void changeTheme(ThemeMode mode) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setInt('themeMode', mode.index);
+    setState(() => _themeMode = mode);
+  }
+
+  void _loadColorTheme() async {
+    final prefs = await SharedPreferences.getInstance();
+    final index = prefs.getInt('colorTheme') ?? colorThemes[0].toARGB32();
+    setState(() => _selectedColorTheme = Color(index));
+  }
+
+  void changeColorTheme(Color color) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setInt('colorTheme', color.toARGB32());
+    setState(() => _selectedColorTheme = color);
+  }
 
   // This widget is the root of your application.
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Flutter Demo',
+      title: 'NoteIt',
+      themeMode: _themeMode,
       theme: ThemeData(
         colorScheme: .fromSeed(
-          seedColor: Colors.green,
+          seedColor: _selectedColorTheme,
           dynamicSchemeVariant: DynamicSchemeVariant.neutral,
         ),
       ),
       darkTheme: ThemeData(
         brightness: Brightness.dark,
         colorScheme: .fromSeed(
-          seedColor: Colors.green,
+          seedColor: _selectedColorTheme,
           dynamicSchemeVariant: DynamicSchemeVariant.neutral,
           brightness: Brightness.dark,
         ),
       ),
-      home: const MyHomePage(title: 'Flutter Demo Home Page'),
+      home: MyHomePage(
+        selectedColorTheme: _selectedColorTheme,
+        selectedThemeMode: _themeMode,
+        onColorThemeChange: changeColorTheme,
+        onThemeModeChange: changeTheme,
+      ),
     );
   }
 }
 
 class MyHomePage extends StatefulWidget {
-  const MyHomePage({super.key, required this.title});
+  MyHomePage({
+    super.key,
+    required this.selectedColorTheme,
+    required this.selectedThemeMode,
+    required this.onColorThemeChange,
+    required this.onThemeModeChange,
+  });
 
-  // This widget is the home page of your application. It is stateful, meaning
-  // that it has a State object (defined below) that contains fields that affect
-  // how it looks.
-
-  // This class is the configuration for the state. It holds the values (in this
-  // case the title) provided by the parent (in this case the App widget) and
-  // used by the build method of the State. Fields in a Widget subclass are
-  // always marked "final".
-
-  final String title;
+  Color selectedColorTheme;
+  ThemeMode selectedThemeMode;
+  void Function(Color color) onColorThemeChange;
+  void Function(ThemeMode mode) onThemeModeChange;
 
   @override
   State<MyHomePage> createState() => _MyHomePageState();
@@ -84,6 +143,7 @@ class _MyHomePageState extends State<MyHomePage> {
 
   @override
   void initState() {
+    super.initState();
     Future<List<Note>> loadedNotes = loadSavedNotes();
     loadedNotes.then((value) {
       setState(() {
@@ -91,7 +151,6 @@ class _MyHomePageState extends State<MyHomePage> {
         _visibleNotes = _notes;
       });
     });
-    super.initState();
   }
 
   void _updateNoteFiltering(String searchText) {
@@ -128,13 +187,25 @@ class _MyHomePageState extends State<MyHomePage> {
   }
 
   void _toggleMenu() {
-    final resultFut = showDialog<bool>(
+    final resultFut = showDialog<Map<String, dynamic>>(
       context: context,
-      builder: (ctx) => SettingsMenu(),
+      builder: (ctx) => SettingsMenu(
+        selectedThemeMode: widget.selectedThemeMode,
+        selectedColorTheme: widget.selectedColorTheme,
+      ),
     );
 
     resultFut.then((val) {
       print(val);
+
+      if (val == null) {
+        return;
+      }
+
+      setState(() {
+        widget.onColorThemeChange(val["colorTheme"]);
+        widget.onThemeModeChange(val["themeMode"]);
+      });
     });
   }
 
@@ -213,7 +284,7 @@ class _MyHomePageState extends State<MyHomePage> {
                         decoration: InputDecoration(
                           hintText: _selectedNote != null
                               ? "Your note here..."
-                              : "Create a note to start",
+                              : "Select a note to start",
                           hintStyle: TextStyle(
                             color: Theme.of(
                               context,

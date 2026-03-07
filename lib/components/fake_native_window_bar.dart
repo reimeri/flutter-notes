@@ -1,4 +1,3 @@
-import 'package:NoteIt/components/settings_menu.dart';
 import 'package:NoteIt/note.dart';
 import 'package:NoteIt/utils/misc.dart';
 import 'package:flutter/material.dart';
