@@ -1,5 +1,6 @@
+import 'package:NoteIt/components/settings_menu.dart';
 import 'package:NoteIt/components/side_bar.dart';
-import 'package:NoteIt/components/window_bar.dart';
+import 'package:NoteIt/components/fake_native_window_bar.dart';
 import 'package:flutter/material.dart';
 import 'package:NoteIt/utils/auto_debounce.dart';
 import 'package:NoteIt/utils/misc.dart';
@@ -117,13 +118,23 @@ class _MyHomePageState extends State<MyHomePage> {
   }
 
   void _toggleSearch() {
-    print("Toggling search");
     setState(() {
       _isSearchEnabled = !_isSearchEnabled;
 
       if (!_isSearchEnabled) {
         _visibleNotes = _notes;
       }
+    });
+  }
+
+  void _toggleMenu() {
+    final resultFut = showDialog<bool>(
+      context: context,
+      builder: (ctx) => SettingsMenu(),
+    );
+
+    resultFut.then((val) {
+      print(val);
     });
   }
 
@@ -165,54 +176,60 @@ class _MyHomePageState extends State<MyHomePage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: Column(
+      body: Stack(
         children: [
-          FakeNativeWindowBar(
-            selectedNote: _selectedNote,
-            isSearchEnabled: _isSearchEnabled,
-            onSearchTextUpdated: _updateNoteFiltering,
-            onToggleSearch: _toggleSearch,
-          ),
-          Expanded(
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                SideBar(
-                  notes: _visibleNotes,
-                  onNoteSelected: _selectNote,
-                  onNoteDeleted: _deleteNote,
-                  currentlySelectedNote: _selectedNote,
-                ),
-                Expanded(
-                  child: TextField(
-                    textAlign: _selectedNote != null
-                        ? TextAlign.start
-                        : TextAlign.center,
-                    textAlignVertical: _selectedNote != null
-                        ? TextAlignVertical.top
-                        : TextAlignVertical.center,
-                    controller: _noteContentController,
-                    onChanged: (value) => {_updateNoteContent(value)},
-                    maxLines: null,
-                    expands: true,
-                    enabled: _selectedNote != null,
-                    decoration: InputDecoration(
-                      hintText: _selectedNote != null
-                          ? "Your note here..."
-                          : "Create a note to start",
-                      hintStyle: TextStyle(
-                        color: Theme.of(
-                          context,
-                        ).colorScheme.secondary.withAlpha(150),
-                      ),
-                      border: InputBorder.none,
-                      contentPadding: EdgeInsets.all(10),
+          Column(
+            children: [
+              FakeNativeWindowBar(
+                selectedNote: _selectedNote,
+                isSearchEnabled: _isSearchEnabled,
+                onSearchTextUpdated: _updateNoteFiltering,
+                onToggleSearch: _toggleSearch,
+                onToggleMenu: _toggleMenu,
+              ),
+              Expanded(
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    SideBar(
+                      notes: _visibleNotes,
+                      onNoteSelected: _selectNote,
+                      onNoteDeleted: _deleteNote,
+                      currentlySelectedNote: _selectedNote,
                     ),
-                  ),
+                    Expanded(
+                      child: TextField(
+                        textAlign: _selectedNote != null
+                            ? TextAlign.start
+                            : TextAlign.center,
+                        textAlignVertical: _selectedNote != null
+                            ? TextAlignVertical.top
+                            : TextAlignVertical.center,
+                        controller: _noteContentController,
+                        onChanged: (value) => {_updateNoteContent(value)},
+                        maxLines: null,
+                        expands: true,
+                        enabled: _selectedNote != null,
+                        decoration: InputDecoration(
+                          hintText: _selectedNote != null
+                              ? "Your note here..."
+                              : "Create a note to start",
+                          hintStyle: TextStyle(
+                            color: Theme.of(
+                              context,
+                            ).colorScheme.secondary.withAlpha(150),
+                          ),
+                          border: InputBorder.none,
+                          contentPadding: EdgeInsets.all(10),
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
-              ],
-            ),
+              ),
+            ],
           ),
+          // Center(child: _isMenuOpen ? SettingsMenu() : Container()),
         ],
       ),
       floatingActionButtonLocation: FloatingActionButtonLocation.startFloat,

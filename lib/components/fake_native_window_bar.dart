@@ -1,3 +1,4 @@
+import 'package:NoteIt/components/settings_menu.dart';
 import 'package:NoteIt/note.dart';
 import 'package:NoteIt/utils/misc.dart';
 import 'package:flutter/material.dart';
@@ -9,12 +10,14 @@ class FakeNativeWindowBar extends StatelessWidget {
     required this.selectedNote,
     required this.isSearchEnabled,
     required this.onToggleSearch,
+    required this.onToggleMenu,
     required this.onSearchTextUpdated,
   });
 
   final Note? selectedNote;
   final bool isSearchEnabled;
   final void Function() onToggleSearch;
+  final void Function() onToggleMenu;
   final void Function(String) onSearchTextUpdated;
 
   @override
@@ -99,8 +102,6 @@ class FakeNativeWindowBar extends StatelessWidget {
                                 style: TextStyle(fontSize: 20),
                                 decoration: InputDecoration(
                                   hintText: "Search...",
-                                  fillColor: Colors.amber,
-                                  hoverColor: Colors.amber,
                                 ),
                                 onChanged: (value) => {
                                   onSearchTextUpdated(value),
@@ -121,9 +122,7 @@ class FakeNativeWindowBar extends StatelessWidget {
                           ),
                         ),
                         icon: Icon(Icons.menu_rounded),
-                        onPressed: () async {
-                          print("Open menu");
-                        },
+                        onPressed: onToggleMenu,
                       ),
                     ),
                   ],
