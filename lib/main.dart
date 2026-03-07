@@ -15,8 +15,8 @@ final colorThemes = [
   Colors.red,
   Colors.green,
   Colors.blue,
-  Colors.yellow,
-  Colors.deepOrange,
+  Colors.white,
+  Colors.orange,
   Colors.indigoAccent,
   Colors.pink,
   Colors.purple,
@@ -24,9 +24,14 @@ final colorThemes = [
   Colors.lime,
 ];
 
-void main() {
+void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   windowManager.ensureInitialized();
+
+  final prefs = await SharedPreferences.getInstance();
+  final themeModeIndex = prefs.getInt('themeMode') ?? ThemeMode.system.index;
+  final colorThemeValue =
+      prefs.getInt('colorTheme') ?? colorThemes[0].toARGB32();
 
   WindowOptions windowOptions = const WindowOptions(
     size: Size(800, 600),
@@ -40,49 +45,35 @@ void main() {
     await windowManager.focus();
   });
 
-  runApp(MyApp());
+  runApp(
+    MyApp(
+      themeMode: ThemeMode.values[themeModeIndex],
+      selectedColorTheme: Color(colorThemeValue),
+    ),
+  );
 }
 
 class MyApp extends StatefulWidget {
-  const MyApp({super.key});
+  MyApp({super.key, required this.selectedColorTheme, required this.themeMode});
+
+  Color selectedColorTheme;
+  ThemeMode themeMode;
 
   @override
   State<MyApp> createState() => _MyAppState();
 }
 
 class _MyAppState extends State<MyApp> {
-  Color _selectedColorTheme = colorThemes[0];
-  ThemeMode _themeMode = ThemeMode.system;
-
-  @override
-  void initState() {
-    super.initState();
-    _loadTheme();
-    _loadColorTheme();
-  }
-
-  void _loadTheme() async {
-    final prefs = await SharedPreferences.getInstance();
-    final index = prefs.getInt('themeMode') ?? ThemeMode.system.index;
-    setState(() => _themeMode = ThemeMode.values[index]);
-  }
-
   void changeTheme(ThemeMode mode) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setInt('themeMode', mode.index);
-    setState(() => _themeMode = mode);
-  }
-
-  void _loadColorTheme() async {
-    final prefs = await SharedPreferences.getInstance();
-    final index = prefs.getInt('colorTheme') ?? colorThemes[0].toARGB32();
-    setState(() => _selectedColorTheme = Color(index));
+    setState(() => widget.themeMode = mode);
   }
 
   void changeColorTheme(Color color) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setInt('colorTheme', color.toARGB32());
-    setState(() => _selectedColorTheme = color);
+    setState(() => widget.selectedColorTheme = color);
   }
 
   // This widget is the root of your application.
@@ -90,24 +81,24 @@ class _MyAppState extends State<MyApp> {
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'NoteIt',
-      themeMode: _themeMode,
+      themeMode: widget.themeMode,
       theme: ThemeData(
         colorScheme: .fromSeed(
-          seedColor: _selectedColorTheme,
-          dynamicSchemeVariant: DynamicSchemeVariant.neutral,
+          seedColor: widget.selectedColorTheme,
+          dynamicSchemeVariant: DynamicSchemeVariant.tonalSpot,
         ),
       ),
       darkTheme: ThemeData(
         brightness: Brightness.dark,
         colorScheme: .fromSeed(
-          seedColor: _selectedColorTheme,
-          dynamicSchemeVariant: DynamicSchemeVariant.neutral,
+          seedColor: widget.selectedColorTheme,
+          dynamicSchemeVariant: DynamicSchemeVariant.tonalSpot,
           brightness: Brightness.dark,
         ),
       ),
       home: MyHomePage(
-        selectedColorTheme: _selectedColorTheme,
-        selectedThemeMode: _themeMode,
+        selectedColorTheme: widget.selectedColorTheme,
+        selectedThemeMode: widget.themeMode,
         onColorThemeChange: changeColorTheme,
         onThemeModeChange: changeTheme,
       ),
