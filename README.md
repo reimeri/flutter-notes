@@ -48,5 +48,5 @@ flatpak-builder --repo=repo --force-clean --sandbox --user --install --install-d
 Optionally test that the app works:
 
 ```bash
-flatpak run onl.anything.NoteIt --user
+flatpak run onl.anything.noteit --user
 ```
