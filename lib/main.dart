@@ -1,6 +1,7 @@
 import 'package:NoteIt/components/settings_menu.dart';
 import 'package:NoteIt/components/side_bar.dart';
 import 'package:NoteIt/components/fake_native_window_bar.dart';
+import 'package:NoteIt/utils/markdown_controller.dart';
 import 'package:flutter/material.dart';
 import 'package:NoteIt/utils/auto_debounce.dart';
 import 'package:NoteIt/utils/misc.dart';
@@ -130,7 +131,7 @@ class _MyHomePageState extends State<MyHomePage> {
   bool _isSearchEnabled = false;
   List<Note> _visibleNotes = [];
   final List<Note> _notes = [];
-  final TextEditingController _noteContentController = TextEditingController();
+  final MarkdownController _noteContentController = MarkdownController();
 
   @override
   void initState() {
@@ -261,6 +262,7 @@ class _MyHomePageState extends State<MyHomePage> {
                     ),
                     Expanded(
                       child: TextField(
+                        autofocus: true,
                         textAlign: _selectedNote != null
                             ? TextAlign.start
                             : TextAlign.center,

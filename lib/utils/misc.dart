@@ -3,7 +3,7 @@ import 'dart:math';
 String extractTitle(String content) {
   List<String> parts = content.split("\n");
   if (parts.isNotEmpty) {
-    return parts[0];
+    return parts[0].startsWith('# ') ? parts[0].substring(2) : parts[0];
   }
 
   return "";
