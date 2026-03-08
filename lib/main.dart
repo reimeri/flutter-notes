@@ -8,6 +8,7 @@ import 'package:NoteIt/utils/misc.dart';
 import 'package:NoteIt/utils/file_utils.dart';
 import 'package:NoteIt/note.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter/rendering.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:window_manager/window_manager.dart';
 
@@ -133,6 +134,67 @@ class _MyHomePageState extends State<MyHomePage> {
   List<Note> _visibleNotes = [];
   final List<Note> _notes = [];
   final MarkdownController _noteContentController = MarkdownController();
+
+  // Key used to locate the TextField's RenderEditable for cursor tracking.
+  final GlobalKey _textFieldKey = GlobalKey();
+  final ScrollController _editorScrollController = ScrollController();
+
+  @override
+  void dispose() {
+    _editorScrollController.dispose();
+    super.dispose();
+  }
+
+  /// Walks the render subtree rooted at [root] to find the first
+  /// [RenderEditable], which is the leaf renderer inside [TextField].
+  RenderEditable? _findRenderEditable(RenderObject root) {
+    if (root is RenderEditable) return root;
+    RenderEditable? result;
+    root.visitChildren((child) {
+      result ??= _findRenderEditable(child);
+    });
+    return result;
+  }
+
+  /// After any programmatic value change (Enter / Tab) the cursor position is
+  /// updated by the controller but Flutter's normal show-caret pipeline is
+  /// bypassed.  This method replays that pipeline: it finds the RenderEditable,
+  /// computes the caret rect in local coordinates, and calls showOnScreen so
+  /// the enclosing SingleChildScrollView scrolls to keep the cursor visible.
+  void _ensureCursorVisible() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final ctx = _textFieldKey.currentContext;
+      if (ctx == null) return;
+      final root = ctx.findRenderObject();
+      if (root == null) return;
+      final editable = _findRenderEditable(root);
+      if (editable == null) return;
+      final position = _noteContentController.value.selection.extent;
+      if (!_noteContentController.value.selection.isValid) return;
+      final caretRect = editable.getLocalRectForCaret(position);
+      // Inflate slightly so the line above/below the cursor is also visible.
+      editable.showOnScreen(
+        rect: caretRect.inflate(caretRect.height),
+        duration: const Duration(milliseconds: 80),
+        curve: Curves.easeOut,
+      );
+    });
+  }
+
+  void _handleEnterKey() {
+    _noteContentController.handleEnterKey();
+    _ensureCursorVisible();
+  }
+
+  void _handleTabKey() {
+    _noteContentController.handleTabKey();
+    _ensureCursorVisible();
+  }
+
+  void _handleShiftTabKey() {
+    _noteContentController.handleTabKey(shift: true);
+    _ensureCursorVisible();
+  }
 
   @override
   void initState() {
@@ -268,25 +330,25 @@ class _MyHomePageState extends State<MyHomePage> {
                           child: CallbackShortcuts(
                             bindings: {
                               const SingleActivator(LogicalKeyboardKey.enter):
-                                  _noteContentController.handleEnterKey,
+                                  _handleEnterKey,
                               const SingleActivator(LogicalKeyboardKey.tab):
-                                  _noteContentController.handleTabKey,
+                                  _handleTabKey,
                               const SingleActivator(
                                 LogicalKeyboardKey.tab,
                                 shift: true,
-                              ): () => _noteContentController.handleTabKey(
-                                shift: true,
-                              ),
+                              ): _handleShiftTabKey,
                             },
                             child: ConstrainedBox(
                               constraints: BoxConstraints(maxWidth: 700),
                               child: SingleChildScrollView(
+                                controller: _editorScrollController,
                                 child: ConstrainedBox(
                                   constraints: BoxConstraints(
                                     minHeight: constraints.maxHeight,
                                   ),
                                   child: IntrinsicHeight(
                                     child: TextField(
+                                      key: _textFieldKey,
                                       autofocus: true,
                                       textAlign: _selectedNote != null
                                           ? TextAlign.start
