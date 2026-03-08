@@ -1,6 +1,6 @@
 import 'dart:io';
 
-import 'package:NoteIt/note.dart';
+import 'package:noteit/note.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart' as p;
 

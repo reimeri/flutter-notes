@@ -1,5 +1,5 @@
-import 'package:NoteIt/note.dart';
-import 'package:NoteIt/utils/misc.dart';
+import 'package:noteit/note.dart';
+import 'package:noteit/utils/misc.dart';
 import 'package:flutter/material.dart';
 
 class SideBar extends StatelessWidget {

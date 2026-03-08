@@ -1,4 +1,4 @@
-import 'package:NoteIt/main.dart';
+import 'package:noteit/main.dart';
 import 'package:flutter/material.dart';
 
 class SettingsMenu extends StatelessWidget {
