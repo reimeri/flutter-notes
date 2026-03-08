@@ -1,17 +1,52 @@
 # NoteIt
 
-A new Flutter project.
+A simple note taking app.
 
-## Getting Started
+- GTK4 styling
+- Uses plain markdown files for notes
+- Color themes
+- Minimal
 
-This project is a starting point for a Flutter application.
+## Building
 
-A few resources to get you started if this is your first Flutter project:
+### Prerequisites
 
-- [Learn Flutter](https://docs.flutter.dev/get-started/learn-flutter)
-- [Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Flutter learning resources](https://docs.flutter.dev/reference/learning-resources)
+Packages needed:
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+```
+flutter
+rustup
+python3
+unzip
+flatpak-builder
+```
+
+To setup the environment to build a flatpak run:
+
+```bash
+git clone https://github.com/TheAppgineer/flatpak-flutter
+cd flatpak-flutter
+python -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+```
+
+Then create a folder for the app
+
+```bash
+mkdir onl.anything.noteit
+cd onl.anything.noteit
+```
+
+Finally create the manifest for the build and build the flatpak app.
+
+```bash
+../flatpak-flutter.py --template https://github.com/reimeri/flutter-notes --id onl.anything.noteit --command noteit flatpak-flutter.yml
+flatpak-builder --repo=repo --force-clean --sandbox --user --install --install-deps-from=flathub build onl.anything.noteit.yml
+```
+
+Optionally test that the app works:
+
+```bash
+flatpak run onl.anything.NoteIt --user
+```
