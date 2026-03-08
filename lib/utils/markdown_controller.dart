@@ -46,6 +46,12 @@ class MarkdownController extends TextEditingController {
   static final RegExp _ul = RegExp(r'^[ \t]*[*+\-] .*$', multiLine: true);
   static final RegExp _ol = RegExp(r'^[ \t]*\d+\. .*$', multiLine: true);
 
+  // Line-level regexes with capture groups used by handleEnterKey.
+  static final RegExp _ulLine = RegExp(r'^(\s*)([*+\-]) (.*)$');
+  static final RegExp _olLine = RegExp(r'^(\s*)(\d+)\. (.*)$');
+
+  static const String _indentUnit = '  '; // 2 spaces per indent level
+
   // Fenced code blocks – dotAll so `.` matches newlines inside the fence.
   static final RegExp _fencedCode = RegExp(
     r'^```[^\n]*\n[\s\S]*?^```[ \t]*$',
@@ -352,6 +358,210 @@ class MarkdownController extends TextEditingController {
         decoration: TextDecoration.underline,
         decorationColor: Colors.blue,
       );
+
+  // ── List editing helpers ──────────────────────────────────────────────
+
+  /// Returns the offset of the start of the line containing [offset].
+  int _lineStart(String src, int offset) {
+    if (offset <= 0) return 0;
+    final before = src.lastIndexOf('\n', offset - 1);
+    return before == -1 ? 0 : before + 1;
+  }
+
+  /// Returns the offset of the end of the line containing [offset]
+  /// (the position of the `\n`, or [src.length] on the last line).
+  int _lineEnd(String src, int offset) {
+    final after = src.indexOf('\n', offset);
+    return after == -1 ? src.length : after;
+  }
+
+  /// Call this when the user presses **Enter**.
+  ///
+  /// - If the cursor is on a non-empty unordered list item, a new item with
+  ///   the same bullet character and indent is inserted on the next line.
+  /// - If the cursor is on a non-empty ordered list item, the next item with
+  ///   an incremented number is inserted.
+  /// - If the current line is an *empty* list item (only the marker, no body),
+  ///   the marker is removed and the list is exited.
+  /// - Otherwise a plain `\n` is inserted.
+  ///
+  /// Wrap the `TextField` in a `CallbackShortcuts` that binds
+  /// `LogicalKeyboardKey.enter` to this method so that the default newline
+  /// insertion is suppressed.
+  void handleEnterKey() {
+    final sel = value.selection;
+    if (!sel.isValid) return;
+
+    String src = value.text;
+    int cursor = sel.start;
+
+    // Delete selected text first (mirrors default behaviour).
+    if (!sel.isCollapsed) {
+      src = src.replaceRange(sel.start, sel.end, '');
+      cursor = sel.start;
+    }
+
+    final lStart = _lineStart(src, cursor);
+    final lEnd = _lineEnd(src, cursor);
+    final currentLine = src.substring(lStart, lEnd);
+
+    // ── Unordered list ────────────────────────────────────────────────
+    final ulMatch = _ulLine.firstMatch(currentLine);
+    if (ulMatch != null) {
+      final indent = ulMatch.group(1)!;
+      final bullet = ulMatch.group(2)!;
+      final body = ulMatch.group(3)!;
+      if (body.isEmpty) {
+        // Empty item → exit list: erase the marker, leave a blank line.
+        final newText = src.replaceRange(lStart, lEnd, '');
+        value = TextEditingValue(
+          text: newText,
+          selection: TextSelection.collapsed(offset: lStart),
+        );
+        return;
+      }
+      final prefix = '\n$indent$bullet ';
+      final newText = src.substring(0, cursor) + prefix + src.substring(cursor);
+      value = TextEditingValue(
+        text: newText,
+        selection: TextSelection.collapsed(offset: cursor + prefix.length),
+      );
+      return;
+    }
+
+    // ── Ordered list ──────────────────────────────────────────────────
+    final olMatch = _olLine.firstMatch(currentLine);
+    if (olMatch != null) {
+      final indent = olMatch.group(1)!;
+      final number = int.parse(olMatch.group(2)!);
+      final body = olMatch.group(3)!;
+      if (body.isEmpty) {
+        final newText = src.replaceRange(lStart, lEnd, '');
+        value = TextEditingValue(
+          text: newText,
+          selection: TextSelection.collapsed(offset: lStart),
+        );
+        return;
+      }
+      final prefix = '\n$indent${number + 1}. ';
+      final newText = src.substring(0, cursor) + prefix + src.substring(cursor);
+      value = TextEditingValue(
+        text: newText,
+        selection: TextSelection.collapsed(offset: cursor + prefix.length),
+      );
+      return;
+    }
+
+    // ── Default: plain newline ─────────────────────────────────────────
+    final newText = src.substring(0, cursor) + '\n' + src.substring(cursor);
+    value = TextEditingValue(
+      text: newText,
+      selection: TextSelection.collapsed(offset: cursor + 1),
+    );
+  }
+
+  /// Call this when the user presses **Tab** ([shift] = false) or
+  /// **Shift+Tab** ([shift] = true).
+  ///
+  /// - **Collapsed cursor**: Tab inserts [_indentUnit] spaces at the cursor;
+  ///   Shift+Tab removes up to [_indentUnit].length leading spaces from the
+  ///   start of the current line.
+  /// - **Selection spanning one or more lines**: every touched line is
+  ///   indented or dedented; the selection afterwards covers all those lines.
+  ///
+  /// Wrap the `TextField` in a `CallbackShortcuts` that binds
+  /// `LogicalKeyboardKey.tab` (and Shift+Tab) to this method so that the
+  /// default focus-traversal behaviour is suppressed.
+  void handleTabKey({bool shift = false}) {
+    final sel = value.selection;
+    if (!sel.isValid) return;
+
+    final src = value.text;
+
+    // ── Collapsed: single-line behaviour ─────────────────────────────
+    if (sel.isCollapsed) {
+      final lStart = _lineStart(src, sel.start);
+      if (!shift) {
+        final newText =
+            src.substring(0, sel.start) +
+            _indentUnit +
+            src.substring(sel.start);
+        value = TextEditingValue(
+          text: newText,
+          selection: TextSelection.collapsed(
+            offset: sel.start + _indentUnit.length,
+          ),
+        );
+      } else {
+        final lEnd = _lineEnd(src, sel.start);
+        final line = src.substring(lStart, lEnd);
+        int spaces = 0;
+        for (
+          int i = 0;
+          i < _indentUnit.length && i < line.length && line[i] == ' ';
+          i++
+        ) {
+          spaces++;
+        }
+        if (spaces == 0) return;
+        final newText = src.replaceRange(lStart, lStart + spaces, '');
+        value = TextEditingValue(
+          text: newText,
+          selection: TextSelection.collapsed(
+            offset: math.max(lStart, sel.start - spaces),
+          ),
+        );
+      }
+      return;
+    }
+
+    // ── Non-collapsed: multi-line behaviour ──────────────────────────
+    // If the selection ends exactly at the start of a line (the \n before it
+    // is the last selected character), exclude that line from processing.
+    int selEnd = sel.end;
+    if (selEnd > sel.start &&
+        selEnd > 0 &&
+        selEnd <= src.length &&
+        src.substring(0, selEnd).endsWith('\n')) {
+      selEnd--;
+    }
+
+    final blockStart = _lineStart(src, sel.start);
+    final blockEnd = _lineEnd(src, math.max(sel.start, selEnd));
+    final block = src.substring(blockStart, blockEnd);
+    final lines = block.split('\n');
+
+    final processedLines = <String>[];
+    for (final line in lines) {
+      if (!shift) {
+        processedLines.add(_indentUnit + line);
+      } else {
+        int spaces = 0;
+        for (
+          int i = 0;
+          i < _indentUnit.length && i < line.length && line[i] == ' ';
+          i++
+        ) {
+          spaces++;
+        }
+        processedLines.add(line.substring(spaces));
+      }
+    }
+
+    final processedBlock = processedLines.join('\n');
+    final newText =
+        src.substring(0, blockStart) + processedBlock + src.substring(blockEnd);
+
+    // After indent/dedent the selection covers all processed lines —
+    // this matches the behaviour of VS Code and similar editors.
+    value = TextEditingValue(
+      text: newText,
+      selection: TextSelection(
+        baseOffset: blockStart,
+        extentOffset: blockStart + processedBlock.length,
+      ),
+    );
+  }
 
   // ── Composing text overlay ────────────────────────────────────────────
 

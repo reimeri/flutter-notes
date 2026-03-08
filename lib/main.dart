@@ -7,6 +7,7 @@ import 'package:NoteIt/utils/auto_debounce.dart';
 import 'package:NoteIt/utils/misc.dart';
 import 'package:NoteIt/utils/file_utils.dart';
 import 'package:NoteIt/note.dart';
+import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:window_manager/window_manager.dart';
 
@@ -260,31 +261,65 @@ class _MyHomePageState extends State<MyHomePage> {
                       onNoteDeleted: _deleteNote,
                       currentlySelectedNote: _selectedNote,
                     ),
+
                     Expanded(
-                      child: TextField(
-                        autofocus: true,
-                        textAlign: _selectedNote != null
-                            ? TextAlign.start
-                            : TextAlign.center,
-                        textAlignVertical: _selectedNote != null
-                            ? TextAlignVertical.top
-                            : TextAlignVertical.center,
-                        controller: _noteContentController,
-                        onChanged: (value) => {_updateNoteContent(value)},
-                        maxLines: null,
-                        expands: true,
-                        enabled: _selectedNote != null,
-                        decoration: InputDecoration(
-                          hintText: _selectedNote != null
-                              ? "Your note here..."
-                              : "Select a note to start",
-                          hintStyle: TextStyle(
-                            color: Theme.of(
-                              context,
-                            ).colorScheme.secondary.withAlpha(150),
+                      child: LayoutBuilder(
+                        builder: (context, constraints) => Center(
+                          child: CallbackShortcuts(
+                            bindings: {
+                              const SingleActivator(LogicalKeyboardKey.enter):
+                                  _noteContentController.handleEnterKey,
+                              const SingleActivator(LogicalKeyboardKey.tab):
+                                  _noteContentController.handleTabKey,
+                              const SingleActivator(
+                                LogicalKeyboardKey.tab,
+                                shift: true,
+                              ): () => _noteContentController.handleTabKey(
+                                shift: true,
+                              ),
+                            },
+                            child: ConstrainedBox(
+                              constraints: BoxConstraints(maxWidth: 700),
+                              child: SingleChildScrollView(
+                                child: ConstrainedBox(
+                                  constraints: BoxConstraints(
+                                    minHeight: constraints.maxHeight,
+                                  ),
+                                  child: IntrinsicHeight(
+                                    child: TextField(
+                                      autofocus: true,
+                                      textAlign: _selectedNote != null
+                                          ? TextAlign.start
+                                          : TextAlign.center,
+                                      textAlignVertical: _selectedNote != null
+                                          ? TextAlignVertical.top
+                                          : TextAlignVertical.center,
+                                      controller: _noteContentController,
+                                      onChanged: (value) => {
+                                        _updateNoteContent(value),
+                                      },
+                                      maxLines: null,
+                                      expands: true,
+                                      enabled: _selectedNote != null,
+                                      decoration: InputDecoration(
+                                        hintText: _selectedNote != null
+                                            ? "Your note here..."
+                                            : "Select a note to start",
+                                        hintStyle: TextStyle(
+                                          color: Theme.of(context)
+                                              .colorScheme
+                                              .secondary
+                                              .withAlpha(150),
+                                        ),
+                                        border: InputBorder.none,
+                                        contentPadding: EdgeInsets.all(10),
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ),
                           ),
-                          border: InputBorder.none,
-                          contentPadding: EdgeInsets.all(10),
                         ),
                       ),
                     ),
